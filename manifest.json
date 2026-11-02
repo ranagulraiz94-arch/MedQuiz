@@ -1,0 +1,8 @@
+{
+  "name": "MedQuiz - Cell Pathology",
+  "short_name": "MedQuiz",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f3f6fb",
+  "theme_color": "#101c36"
+}

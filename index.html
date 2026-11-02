@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#101c36">
+<link rel="manifest" href="manifest.json">
+<title>MedQuiz — Cell Pathology</title>
+<style>
+:root{--navy:#101c36;--blue:#3478e5;--green:#16803c;--red:#c93232;--bg:#f3f6fb;--card:#fff;--ink:#17243b;--muted:#66758b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{background:var(--navy);color:white;padding:18px 16px 16px;position:sticky;top:0;z-index:2}
+.brand{font-weight:800;font-size:19px;letter-spacing:.3px}.sub{color:#c5d1e5;font-size:12px;margin-top:3px}
+main{max-width:650px;margin:0 auto;padding:16px 14px 28px}
+.panel{background:var(--card);border-radius:18px;padding:16px;box-shadow:0 4px 18px #17243b0b;margin-bottom:14px}
+h1{font-size:21px;margin:3px 0 12px}h2{font-size:16px;margin:0 0 10px}
+button,select{font:inherit}button{border:0;border-radius:12px;padding:12px 15px;font-weight:700;cursor:pointer}
+.primary{background:var(--blue);color:white;width:100%}.secondary{background:#e8eef8;color:var(--navy)}
+.modegrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tag{font-size:12px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.progress{height:8px;background:#e7edf5;border-radius:9px;overflow:hidden;margin:12px 0}.bar{height:100%;background:var(--blue);width:0;transition:width .2s}
+.qtext{font-size:18px;font-weight:750;line-height:1.4;margin:14px 0}
+.option{width:100%;display:flex;align-items:flex-start;text-align:left;gap:10px;background:#fff;border:1.5px solid #d8e0ec;margin:8px 0;padding:12px;border-radius:13px;color:var(--ink)}
+.letter{flex:0 0 28px;height:28px;border-radius:8px;background:#edf2f9;display:grid;place-items:center;font-weight:800}
+.option.selected{border-color:#3478e5;background:#e9f1ff}.option.correct{border-color:var(--green);background:#e4f5e9;color:#115d2e}.option.correct .letter{background:var(--green);color:#fff}
+.option.wrong{border-color:var(--red);background:#fde8e8;color:#8c1e1e}.option.wrong .letter{background:var(--red);color:white}
+.feedback{border-radius:12px;padding:12px;margin:12px 0;font-weight:700}.feedback.good{background:#e4f5e9;color:#115d2e}.feedback.bad{background:#fde8e8;color:#8c1e1e}
+.explanation{font-size:14px;line-height:1.5;color:#42516a;font-weight:500;margin-top:6px}
+.actions{display:flex;gap:9px;margin-top:16px}.actions button{flex:1}.small{font-size:13px;color:var(--muted)}
+.hide{display:none!important}.row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.resultbig{font-size:38px;font-weight:900;color:var(--navy)}.reviewitem{border-top:1px solid #e3e9f2;padding:12px 0}
+footer{text-align:center;color:var(--muted);font-size:12px;padding:12px}
+</style>
+</head>
+<body>
+<header><div class="brand">MedQuiz</div><div class="sub">Personal MCQ study • Prototype</div></header>
+<main>
+<section id="home">
+ <div class="panel">
+  <div class="tag">Question bank</div><h1>Cell Pathology</h1>
+  <p>Chapter 1 • First 8 MCQs transcribed from page 1 for testing.</p>
+  <div class="modegrid">
+   <button class="primary" onclick="start('practice')">Practice mode</button>
+   <button class="primary" onclick="start('exam')">Exam mode</button>
+  </div>
+  <p class="small">Practice: feedback after each answer. Exam: answers stay hidden until submission.</p>
+ </div>
+ <div class="panel"><h2>Prototype notes</h2><p class="small">This test version contains only the MCQs verified from page 1. We'll expand it after checking transcription accuracy.</p></div>
+</section>
+
+<section id="quiz" class="hide">
+ <div class="panel">
+  <div class="row"><span class="tag" id="modeLabel">PRACTICE</span><span class="tag" id="count">1 / 8</span></div>
+  <div class="progress"><div class="bar" id="bar"></div></div>
+  <div class="qtext" id="question"></div>
+  <div id="options"></div>
+  <div id="feedback" class="hide"></div>
+  <div class="actions">
+   <button class="secondary" onclick="prev()">← Previous</button>
+   <button class="primary" id="nextBtn" onclick="next()">Next →</button>
+  </div>
+  <button id="submitBtn" class="primary hide" style="margin-top:10px" onclick="submitExam()">Submit exam</button>
+  <button class="secondary" style="width:100%;margin-top:10px" onclick="goHome()">Exit to home</button>
+ </div>
+</section>
+
+<section id="results" class="hide">
+ <div class="panel">
+  <div class="tag">Exam results</div><h1>Completed!</h1>
+  <div class="resultbig" id="score"></div><p id="scoreText"></p>
+  <button class="primary" onclick="review()">Review answers</button>
+  <button class="secondary" style="width:100%;margin-top:10px" onclick="goHome()">Back to home</button>
+ </div>
+ <div class="panel hide" id="reviewPanel"><h2>Answer review</h2><div id="reviewList"></div></div>
+</section>
+</main>
+<footer>MedQuiz • Offline-ready prototype</footer>
+<script src="questions.js"></script>
+<script>
+let mode="practice", idx=0, answers={}, submitted=false;
+const letters=["A","B","C","D","E"];
+function start(m){mode=m;idx=0;answers={};submitted=false;show("quiz");render()}
+function show(id){["home","quiz","results"].forEach(x=>document.getElementById(x).classList.toggle("hide",x!==id))}
+function goHome(){show("home")}
+function render(){
+ const q=QUESTIONS[idx];document.getElementById("modeLabel").textContent=mode.toUpperCase();
+ document.getElementById("count").textContent=(idx+1)+" / "+QUESTIONS.length;
+ document.getElementById("bar").style.width=((idx+1)/QUESTIONS.length*100)+"%";
+ document.getElementById("question").textContent=q.question;
+ const box=document.getElementById("options");box.innerHTML="";
+ q.options.forEach((o,i)=>{
+  const b=document.createElement("button");b.className="option";
+  const isSelected=answers[idx]===i, isCorrect=i===q.answer;
+  if(mode==="practice"&&answers[idx]!==undefined){
+   if(isCorrect)b.classList.add("correct");
+   else if(isSelected)b.classList.add("wrong");
+  } else if(isSelected)b.classList.add("selected");
+  const l=document.createElement("span");l.className="letter";l.textContent=letters[i];
+  const t=document.createElement("span");t.textContent=o;b.append(l,t);
+  b.onclick=()=>choose(i);box.appendChild(b);
+ });
+ const fb=document.getElementById("feedback");fb.className="hide";
+ if(mode==="practice"&&answers[idx]!==undefined){
+  const good=answers[idx]===q.answer;fb.className="feedback "+(good?"good":"bad");
+  fb.innerHTML=(good?"✓ Correct!":"✗ Incorrect. Correct answer: "+letters[q.answer]+". "+q.options[q.answer]);
+  const ex=document.createElement("div");ex.className="explanation";ex.textContent=q.explanation||"No explanation was provided in the scanned page.";fb.appendChild(ex);
+ }
+ document.getElementById("nextBtn").textContent=idx===QUESTIONS.length-1?(mode==="exam"?"Last question →":"Finish →"):"Next →";
+ document.getElementById("submitBtn").classList.toggle("hide",mode!=="exam");
+}
+function choose(i){if(mode==="practice"&&answers[idx]!==undefined)return;answers[idx]=i;render()}
+function prev(){if(idx>0){idx--;render()}}
+function next(){
+ if(idx<QUESTIONS.length-1){idx++;render();return}
+ if(mode==="exam"){submitExam();return}
+ show("home")
+}
+function submitExam(){
+ submitted=true;let correct=0;
+ QUESTIONS.forEach((q,i)=>{if(answers[i]===q.answer)correct++});
+ show("results");document.getElementById("score").textContent=correct+" / "+QUESTIONS.length;
+ document.getElementById("scoreText").textContent="Correct: "+correct+" • Incorrect/unanswered: "+(QUESTIONS.length-correct);
+}
+function review(){
+ const p=document.getElementById("reviewPanel");p.classList.remove("hide");const list=document.getElementById("reviewList");list.innerHTML="";
+ QUESTIONS.forEach((q,i)=>{
+  const d=document.createElement("div");d.className="reviewitem";
+  const user=answers[i]===undefined?"Not answered":letters[answers[i]]+". "+q.options[answers[i]];
+  d.innerHTML="<b>"+(i+1)+". "+q.question+"</b>";
+  const a=document.createElement("p");a.textContent="Your answer: "+user;d.appendChild(a);
+  const c=document.createElement("p");c.style.color="#16803c";c.style.fontWeight="700";c.textContent="Correct: "+letters[q.answer]+". "+q.options[q.answer];d.appendChild(c);
+  const e=document.createElement("p");e.className="small";e.textContent=q.explanation||"";d.appendChild(e);list.appendChild(d);
+ });
+}
+if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))}
+</script>
+</body></html>
